@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misi 2: Kod Rahsia 25 Rasul</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts: Fredoka & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            turquoise: '#48B8B0',
+                            sky: '#79C8F5',
+                            gold: '#FFD166',
+                            purple: '#8D79D6',
+                            cream: '#FFF8EB',
+                            dark: '#24324A',
+                            accent: '#FF6B6B'
+                        }
+                    },
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Fredoka', 'Inter', sans-serif;
+            background-color: #24324A;
+            background-image: radial-gradient(#48B8B0 1px, transparent 1px), radial-gradient(#79C8F5 1px, #24324A 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .glass-card {
+            background: rgba(255, 248, 235, 0.95);
+            backdrop-filter: blur(10px);
+            border: 4px solid #FFD166;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-bounce {
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-bounce:hover {
+            transform: scale(1.05);
+        }
+        .btn-bounce:active {
+            transform: scale(0.95);
+        }
+
+        .draggable-item {
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.2s ease;
+            touch-action: none;
+        }
+        .draggable-item.dragging {
+            opacity: 0.6;
+            transform: scale(1.03);
+            cursor: grabbing;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #24324A;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #48B8B0;
+            border-radius: 4px;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(255, 209, 102, 0.8)); }
+            50% { filter: drop-shadow(0 0 30px rgba(255, 209, 102, 1)); }
+        }
+        .magic-glow {
+            animation: pulseGlow 2.5s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-brand-dark flex flex-col justify-between p-2 sm:p-4 overflow-x-hidden">
+
+    <header id="game-header" class="w-full max-w-4xl mx-auto mb-2 hidden">
+        <div class="bg-brand-cream border-2 sm:border-4 border-brand-gold rounded-2xl p-2 sm:p-3 shadow-lg flex flex-wrap items-center justify-between gap-2 text-xs sm:text-base">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-brand-sky flex items-center justify-center text-white font-bold text-lg shadow-inner">
+                    <i class="fa-solid fa-user-ninja"></i>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-500 font-bold block leading-none">PEMAIN</span>
+                    <span id="display-player-name" class="font-bold text-brand-purple truncate max-w-[120px] sm:max-w-[180px] block">Aisyah</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-6">
+                <div class="bg-brand-sky/20 px-3 py-1 rounded-xl border border-brand-sky/40 text-center">
+                    <span class="text-[10px] sm:text-xs text-brand-dark font-bold block leading-none">MISI</span>
+                    <span class="font-bold text-brand-dark">Misi 2</span>
+                </div>
+
+                <div class="bg-brand-gold/30 px-3 py-1 rounded-xl border border-brand-gold text-center">
+                    <span class="text-[10px] sm:text-xs text-brand-dark font-bold block leading-none">SKOR</span>
+                    <span id="display-score" class="font-bold text-amber-700">0 / 100</span>
+                </div>
+
+                <div class="bg-emerald-100 px-3 py-1 rounded-xl border border-emerald-300 text-center">
+                    <span class="text-[10px] sm:text-xs text-emerald-700 font-bold block leading-none">STATUS</span>
+                    <span id="display-status" class="font-bold text-emerald-600">Belum Selesai</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-4xl mx-auto flex-1 flex flex-col justify-center items-center">
+
+        <section id="screen-welcome" class="w-full glass-card rounded-3xl p-4 sm:p-8 my-auto text-center relative overflow-hidden transition-all duration-300">
+            <div class="absolute -top-10 -left-10 w-28 h-28 bg-brand-gold/40 rounded-full blur-xl"></div>
+            <div class="absolute -bottom-10 -right-10 w-28 h-28 bg-brand-turquoise/40 rounded-full blur-xl"></div>
+
+            <div class="inline-block bg-brand-purple text-white px-4 py-1.5 rounded-full font-bold text-xs sm:text-sm tracking-wide mb-3 shadow">
+                📚 PENDIDIKAN ISLAM - TAHUN 4 ARIF
+            </div>
+
+            <h1 class="text-2xl sm:text-4xl font-extrabold text-brand-dark mb-2 tracking-tight">
+                SELAMAT DATANG, DETEKTIF KECIL!
+            </h1>
+            <p class="text-sm sm:text-lg text-gray-600 font-medium mb-6">
+                Misi 2: Kod Rahsia 25 Rasul
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto mb-6">
+                <div class="bg-brand-sky/20 border-2 border-brand-sky rounded-2xl p-3 sm:p-4 flex items-center gap-3 relative">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-brand-sky flex-shrink-0 border-2 border-white flex items-center justify-center text-white text-2xl sm:text-3xl shadow">
+                        👦
+                    </div>
+                    <div class="text-left text-xs sm:text-sm">
+                        <span class="font-bold text-brand-dark block text-brand-purple">Omar:</span>
+                        "Hai, kawan-kawan! Kami memerlukan bantuan kamu untuk memecahkan kod rahsia 25 nama rasul!"
+                    </div>
+                </div>
+
+                <div class="bg-pink-100 border-2 border-pink-300 rounded-2xl p-3 sm:p-4 flex items-center gap-3 relative">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-pink-400 flex-shrink-0 border-2 border-white flex items-center justify-center text-white text-2xl sm:text-3xl shadow">
+                        👧
+                    </div>
+                    <div class="text-left text-xs sm:text-sm">
+                        <span class="font-bold text-pink-600 block">Hana:</span>
+                        "Sebelum memulakan misi, beritahu kami nama kamu dahulu!"
+                    </div>
+                </div>
+            </div>
+
+            <div class="my-4 relative flex justify-center">
+                <div class="w-24 h-24 sm:w-32 sm:h-32 bg-brand-gold/30 rounded-full flex items-center justify-center magic-glow">
+                    <span class="text-5xl sm:text-7xl floating">📖</span>
+                </div>
+            </div>
+
+            <div class="max-w-md mx-auto space-y-4">
+                <div class="text-left">
+                    <label for="player-name-input" class="block font-bold text-brand-dark mb-1 text-sm sm:text-base">
+                        <i class="fa-solid fa-pen-nib text-brand-turquoise mr-1"></i> Nama murid:
+                    </label>
+                    <input type="text" id="player-name-input" 
+                           placeholder="Taip nama kamu di sini..." 
+                           maxlength="25"
+                           class="w-full px-4 py-3 rounded-2xl border-4 border-brand-turquoise focus:border-brand-purple focus:outline-none text-base sm:text-lg font-bold text-brand-dark placeholder-gray-400 shadow-inner bg-white">
+                    <p id="name-error-msg" class="text-brand-accent text-xs sm:text-sm font-bold mt-1 hidden text-left flex items-center gap-1">
+                        <i class="fa-solid fa-circle-exclamation"></i> Sila masukkan nama kamu dahulu!
+                    </p>
+                </div>
+
+                <button onclick="handleStartMission()" class="w-full bg-brand-gold hover:bg-amber-400 text-brand-dark font-extrabold text-lg sm:text-xl py-3.5 px-6 rounded-2xl shadow-lg border-b-4 border-amber-600 btn-bounce flex items-center justify-center gap-2">
+                    <span>MULA MISI</span>
+                    <i class="fa-solid fa-rocket"></i>
+                </button>
+            </div>
+        </section>
+
+        <section id="screen-story" class="w-full glass-card rounded-3xl p-6 sm:p-8 my-auto text-center hidden">
+            <div class="max-w-2xl mx-auto space-y-6">
+                <div class="inline-block bg-brand-turquoise text-white px-4 py-1 rounded-full font-bold text-sm">
+                    📜 PENGEMBARAAN BERMULA
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white border-2 border-brand-sky rounded-2xl p-4 flex items-start gap-4 text-left shadow-sm">
+                        <div class="w-12 h-12 rounded-full bg-brand-sky text-white flex items-center justify-center text-2xl flex-shrink-0">
+                            👦
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-brand-purple">Omar</h4>
+                            <p class="text-sm sm:text-base text-gray-700">
+                                “Wah, selamat datang, <span class="player-name-txt font-bold text-brand-turquoise"></span>! Kami ada satu cabaran untuk kamu.”
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border-2 border-pink-300 rounded-2xl p-4 flex items-start gap-4 text-left shadow-sm">
+                        <div class="w-12 h-12 rounded-full bg-pink-400 text-white flex items-center justify-center text-2xl flex-shrink-0">
+                            👧
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-pink-600">Hana</h4>
+                            <p class="text-sm sm:text-base text-gray-700">
+                                “Buku ajaib ini mempunyai lima kad nama rasul yang bercampur susunannya. Kita perlu menyusunnya semula untuk mendapatkan kunci emas!”
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-brand-gold/20 border-2 border-brand-gold rounded-2xl p-4 flex items-center gap-4 text-left">
+                        <div class="text-3xl">🔑</div>
+                        <div>
+                            <h4 class="font-bold text-amber-800">Omar</h4>
+                            <p class="text-sm sm:text-base text-gray-800 font-semibold">
+                                “Bersedia untuk memecahkan kod rahsia?”
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="goToMainGame()" class="w-full sm:w-auto bg-brand-turquoise hover:bg-teal-500 text-white font-extrabold text-lg sm:text-xl py-4 px-10 rounded-2xl shadow-xl border-b-4 border-teal-700 btn-bounce inline-flex items-center justify-center gap-3">
+                    <span>YA, SAYA BERSEDIA!</span>
+                    <i class="fa-solid fa-circle-check"></i>
+                </button>
+            </div>
+        </section>
+
+        <section id="screen-game" class="w-full glass-card rounded-3xl p-4 sm:p-6 my-auto hidden">
+            <div class="text-center mb-4">
+                <h2 class="text-xl sm:text-3xl font-extrabold text-brand-dark">
+                    MISI 2: SUSUN NAMA RASUL!
+                </h2>
+                <p class="text-xs sm:text-sm text-gray-700 font-medium max-w-xl mx-auto mt-1">
+                    Susun lima nama rasul mengikut urutan yang betul. Bantu Omar dan Hana membuka jambatan misteri untuk mendapatkan kunci emas!
+                </p>
+            </div>
+
+            <div class="relative bg-gradient-to-r from-brand-sky/30 via-brand-purple/20 to-brand-sky/30 border-2 border-brand-sky rounded-2xl p-3 mb-4 overflow-hidden text-center min-h-[90px] flex items-center justify-center">
+                <div id="bridge-locked" class="flex items-center gap-3 text-brand-dark">
+                    <span class="text-2xl sm:text-3xl">🌉</span>
+                    <span class="text-xs sm:text-sm font-bold">Jambatan Misteri Terkunci... Susun nama rasul dengan betul!</span>
+                    <span class="text-2xl sm:text-3xl">🔒</span>
+                </div>
+
+                <div id="bridge-unlocked" class="hidden flex flex-col items-center justify-center space-y-1">
+                    <div class="flex items-center gap-3 text-amber-600 font-extrabold text-base sm:text-lg magic-glow">
+                        <span>✨ 🌉 JAMBATAN AJAIB TERBUKA! 🔑 ✨</span>
+                    </div>
+                    <p class="text-xs text-emerald-700 font-bold">Tahniah! Kunci Emas Berjaya Didapati!</p>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <div class="flex justify-between items-center px-2 mb-2">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        <i class="fa-solid fa-list-ol mr-1"></i> Kedudukan 1 hingga 5
+                    </span>
+                    <span class="text-xs text-brand-purple font-semibold">
+                        <i class="fa-solid fa-hand-pointer mr-1"></i> Tarik / Guna anak panah
+                    </span>
+                </div>
+
+                <div id="cards-list" class="space-y-2.5"></div>
+            </div>
+
+            <div id="hint-display-box" class="hidden bg-amber-50 border-2 border-brand-gold rounded-2xl p-3 mb-4 text-xs sm:text-sm text-amber-900 flex items-start gap-2">
+                <i class="fa-solid fa-lightbulb text-brand-gold text-lg flex-shrink-0 mt-0.5"></i>
+                <div>
+                    <span class="font-bold block text-amber-900" id="hint-title">Petunjuk:</span>
+                    <span id="hint-text-content">---</span>
+                </div>
+            </div>
+
+            <div id="game-feedback" class="hidden rounded-2xl p-3 mb-4 text-center font-bold text-sm sm:text-base border-2"></div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button onclick="checkAnswer()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-2 rounded-xl shadow-md border-b-4 border-emerald-700 btn-bounce flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                    <i class="fa-solid fa-circle-check text-base"></i>
+                    <span>SEMAK JAWAPAN</span>
+                </button>
+
+                <button onclick="resetCardOrder()" class="bg-brand-sky hover:bg-sky-400 text-brand-dark font-bold py-3 px-2 rounded-xl shadow-md border-b-4 border-sky-600 btn-bounce flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                    <i class="fa-solid fa-rotate-right text-base"></i>
+                    <span>SUSUN SEMULA</span>
+                </button>
+
+                <button onclick="showNextHint()" class="bg-brand-gold hover:bg-amber-400 text-brand-dark font-bold py-3 px-2 rounded-xl shadow-md border-b-4 border-amber-600 btn-bounce flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                    <i class="fa-solid fa-lightbulb text-base"></i>
+                    <span>PETUNJUK</span>
+                </button>
+
+                <button onclick="confirmReturnMenu()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-2 rounded-xl shadow-md border-b-4 border-gray-400 btn-bounce flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                    <i class="fa-solid fa-house text-base"></i>
+                    <span>MENU UTAMA</span>
+                </button>
+            </div>
+
+            <div id="claim-reward-container" class="mt-4 hidden">
+                <button onclick="goToRewardScreen()" class="w-full bg-brand-purple hover:bg-purple-700 text-white font-extrabold text-lg py-3.5 px-6 rounded-2xl shadow-xl border-b-4 border-purple-900 btn-bounce flex items-center justify-center gap-3 magic-glow">
+                    <span>LIHAT GANJARAN!</span>
+                    <i class="fa-solid fa-trophy text-brand-gold text-2xl"></i>
+                </button>
+            </div>
+        </section>
+
+        <section id="screen-reward" class="w-full my-auto hidden">
+            <div class="glass-card rounded-3xl p-6 sm:p-10 text-center space-y-6">
+                <div>
+                    <div class="inline-block bg-brand-gold text-brand-dark font-extrabold px-4 py-1 rounded-full text-xs sm:text-sm mb-2 shadow">
+                        🏆 MISI BERJAYA DISELESAIKAN!
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold text-brand-dark">
+                        TAHNIAH, <span class="player-name-txt text-brand-turquoise">Aisyah</span>!
+                    </h2>
+                    <p class="text-sm sm:text-base text-gray-600 mt-2 font-medium">
+                        Kamu telah berjaya menyusun kod rahsia 25 Rasul dan membuka kunci emas!
+                    </p>
+                </div>
+
+                <div class="bg-white border-4 border-brand-gold rounded-2xl p-6 shadow-lg max-w-lg mx-auto space-y-4">
+                    <div class="flex justify-center items-center gap-4">
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 bg-brand-sky rounded-full flex items-center justify-center text-3xl sm:text-4xl border-4 border-white shadow-lg floating">
+                            👦
+                        </div>
+                        <div class="text-4xl sm:text-6xl magic-glow">🔑</div>
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 bg-pink-400 rounded-full flex items-center justify-center text-3xl sm:text-4xl border-4 border-white shadow-lg floating" style="animation-delay: 0.5s;">
+                            👧
+                        </div>
+                    </div>
+
+                    <div class="bg-brand-cream/50 rounded-xl p-4 border border-brand-gold/50">
+                        <span class="text-xs text-gray-500 uppercase font-bold block mb-1">Lencana Pencapaian:</span>
+                        <h3 class="text-xl font-black text-brand-purple flex items-center justify-center gap-2">
+                            <span>🏅 Pakar Kod 25 Rasul</span>
+                        </h3>
+                        <p class="text-xs text-emerald-700 font-bold mt-2">
+                            Skor Akhir: 100 / 100 MATA
+                        </p>
+                    </div>
+                </div>
+
+                <div class="space-y-3 max-w-md mx-auto">
+                    <button onclick="replayGame()" class="w-full bg-brand-sky hover:bg-sky-400 text-brand-dark font-bold py-3.5 px-4 rounded-xl shadow border-b-4 border-sky-600 btn-bounce flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>MAIN LAGI</span>
+                    </button>
+
+                    <button onclick="confirmReturnMenu()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-xl border border-gray-300 text-sm">
+                        <i class="fa-solid fa-house mr-1"></i> KEMBALI KE MENU UTAMA
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="w-full max-w-4xl mx-auto text-center py-2 text-white/70 text-xs">
+        <p>Pendidikan Islam Tahun 4 Arif &bull; Misi 2: Kod Rahsia 25 Rasul &bull; Ciptaan Ustazah Nisrin</p>
+    </footer>
+
+    <script>
+        const CORRECT_ORDER = [
+            "Nabi Adam a.s.",
+            "Nabi Idris a.s.",
+            "Nabi Nuh a.s.",
+            "Nabi Hud a.s.",
+            "Nabi Salih a.s."
+        ];
+
+        const HINTS = [
+            "Lihat nama yang berada di kedudukan pertama.",
+            "Nabi Adam a.s. berada di kedudukan pertama, diikuti Nabi Idris a.s.",
+            "Selepas Nabi Idris a.s., susun Nabi Nuh a.s., Nabi Hud a.s. dan Nabi Salih a.s. mengikut urutan."
+        ];
+
+        const gameState = {
+            playerName: "",
+            score: 0,
+            isCompleted: false,
+            currentOrder: [],
+            currentHintIndex: 0
+        };
+
+        window.onload = function() {
+            document.getElementById('player-name-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleStartMission();
+                }
+            });
+        };
+
+        function showScreen(screenId) {
+            document.getElementById('screen-welcome').classList.add('hidden');
+            document.getElementById('screen-story').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-reward').classList.add('hidden');
+
+            document.getElementById(screenId).classList.remove('hidden');
+
+            if (screenId !== 'screen-welcome') {
+                document.getElementById('game-header').classList.remove('hidden');
+            } else {
+                document.getElementById('game-header').classList.add('hidden');
+            }
+        }
+
+        function handleStartMission() {
+            const nameInput = document.getElementById('player-name-input');
+            const rawName = nameInput.value;
+            const trimmedName = rawName.trim();
+
+            if (!trimmedName) {
+                document.getElementById('name-error-msg').classList.remove('hidden');
+                nameInput.focus();
+                return;
+            }
+
+            document.getElementById('name-error-msg').classList.add('hidden');
+            gameState.playerName = trimmedName;
+
+            const nameDisplays = document.querySelectorAll('.player-name-txt');
+            nameDisplays.forEach(el => el.textContent = gameState.playerName);
+            document.getElementById('display-player-name').textContent = gameState.playerName;
+
+            showScreen('screen-story');
+        }
+
+        function goToMainGame() {
+            showScreen('screen-game');
+            initializeRandomOrder();
+        }
+
+        function initializeRandomOrder() {
+            gameState.currentHintIndex = 0;
+            document.getElementById('hint-display-box').classList.add('hidden');
+            document.getElementById('game-feedback').classList.add('hidden');
+            document.getElementById('claim-reward-container').classList.add('hidden');
+            document.getElementById('bridge-locked').classList.remove('hidden');
+            document.getElementById('bridge-unlocked').classList.add('hidden');
+
+            let shuffled = [...CORRECT_ORDER];
+            do {
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+            } while (shuffled.join(',') === CORRECT_ORDER.join(','));
+
+            gameState.currentOrder = shuffled;
+            renderCards();
+        }
+
+        function renderCards() {
+            const container = document.getElementById('cards-list');
+            container.innerHTML = '';
+
+            gameState.currentOrder.forEach((name, index) => {
+                const card = document.createElement('div');
+                card.className = `draggable-item bg-white border-2 border-brand-turquoise rounded-2xl p-3 shadow-md flex items-center justify-between gap-3 select-none`;
+                card.setAttribute('draggable', 'true');
+                card.setAttribute('data-index', index);
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-brand-gold/40 border border-brand-gold text-brand-dark flex items-center justify-center font-bold text-sm">
+                            ${index + 1}
+                        </div>
+                        <span class="font-extrabold text-brand-dark text-sm sm:text-base">${name}</span>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <button onclick="moveCardUp(${index})" ${index === 0 ? 'disabled class="opacity-30 p-1.5"' : 'class="p-1.5 text-brand-turquoise hover:text-teal-700 bg-teal-50 rounded-lg"'} title="Naik">
+                            <i class="fa-solid fa-chevron-up"></i>
+                        </button>
+                        <button onclick="moveCardDown(${index})" ${index === gameState.currentOrder.length - 1 ? 'disabled class="opacity-30 p-1.5"' : 'class="p-1.5 text-brand-turquoise hover:text-teal-700 bg-teal-50 rounded-lg"'} title="Turun">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="cursor-grab p-1.5 text-gray-400">
+                            <i class="fa-solid fa-grip-vertical"></i>
+                        </div>
+                    </div>
+                `;
+
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragend', handleDragEnd);
+
+                container.appendChild(card);
+            });
+        }
+
+        let draggedIndex = null;
+
+        function handleDragStart(e) {
+            draggedIndex = parseInt(this.getAttribute('data-index'));
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const targetIndex = parseInt(this.getAttribute('data-index'));
+            if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                const itemToMove = gameState.currentOrder.splice(draggedIndex, 1)[0];
+                gameState.currentOrder.splice(targetIndex, 0, itemToMove);
+                renderCards();
+            }
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedIndex = null;
+        }
+
+        function moveCardUp(index) {
+            if (index > 0) {
+                const temp = gameState.currentOrder[index];
+                gameState.currentOrder[index] = gameState.currentOrder[index - 1];
+                gameState.currentOrder[index - 1] = temp;
+                renderCards();
+            }
+        }
+
+        function moveCardDown(index) {
+            if (index < gameState.currentOrder.length - 1) {
+                const temp = gameState.currentOrder[index];
+                gameState.currentOrder[index] = gameState.currentOrder[index + 1];
+                gameState.currentOrder[index + 1] = temp;
+                renderCards();
+            }
+        }
+
+        function resetCardOrder() {
+            initializeRandomOrder();
+        }
+
+        function checkAnswer() {
+            const isCorrect = gameState.currentOrder.every((val, i) => val === CORRECT_ORDER[i]);
+            const feedbackEl = document.getElementById('game-feedback');
+
+            if (isCorrect) {
+                gameState.score = 100;
+                gameState.isCompleted = true;
+
+                document.getElementById('display-score').textContent = '100 / 100';
+                document.getElementById('display-status').textContent = 'Selesai';
+
+                document.getElementById('bridge-locked').classList.add('hidden');
+                document.getElementById('bridge-unlocked').classList.remove('hidden');
+
+                feedbackEl.className = "rounded-2xl p-3 mb-4 text-center font-bold text-sm sm:text-base border-2 bg-emerald-100 border-emerald-400 text-emerald-800";
+                feedbackEl.innerHTML = `✨ Hebat, ${gameState.playerName}! Kamu berjaya memecahkan kod rahsia! Kita telah menemui kunci emas!`;
+                feedbackEl.classList.remove('hidden');
+
+                document.getElementById('claim-reward-container').classList.remove('hidden');
+
+                if (typeof confetti === 'function') {
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                }
+
+            } else {
+                feedbackEl.className = "rounded-2xl p-3 mb-4 text-center font-bold text-sm sm:text-base border-2 bg-amber-100 border-amber-400 text-amber-900";
+                feedbackEl.innerHTML = `Belum tepat lagi, ${gameState.playerName}. Cuba semak susunan kad kamu semula!`;
+                feedbackEl.classList.remove('hidden');
+            }
+        }
+
+        function showNextHint() {
+            const hintBox = document.getElementById('hint-display-box');
+            const hintTitle = document.getElementById('hint-title');
+            const hintText = document.getElementById('hint-text-content');
+
+            const currentText = HINTS[gameState.currentHintIndex];
+            hintTitle.textContent = `Petunjuk ${gameState.currentHintIndex + 1}:`;
+            hintText.textContent = currentText;
+
+            hintBox.classList.remove('hidden');
+
+            gameState.currentHintIndex = (gameState.currentHintIndex + 1) % HINTS.length;
+        }
+
+        function goToRewardScreen() {
+            showScreen('screen-reward');
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 150, spread: 90, origin: { y: 0.5 } });
+            }
+        }
+
+        function replayGame() {
+            gameState.score = 0;
+            gameState.isCompleted = false;
+            document.getElementById('display-score').textContent = '0 / 100';
+            document.getElementById('display-status').textContent = 'Belum Selesai';
+            showScreen('screen-game');
+            initializeRandomOrder();
+        }
+
+        function confirmReturnMenu() {
+            showScreen('screen-welcome');
+        }
+    </script>
+</body>
+</html>
